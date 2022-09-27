@@ -153,6 +153,7 @@ type config struct {
 		OpenImConversationName string `yaml:"openImConversationName"`
 		OpenImCacheName        string `yaml:"openImCacheName"`
 		OpenImRealTimeCommName string `yaml:"openImRealTimeCommName"`
+		OpenImEncryptionName   string `yaml:"openImEncryptionName"`
 	}
 	Etcd struct {
 		EtcdSchema string   `yaml:"etcdSchema"`
@@ -527,6 +528,9 @@ type config struct {
 		RealTimeCommPrometheusPort    []int `yaml:"realTimeCommPrometheusPort"`
 		MessageTransferPrometheusPort []int `yaml:"messageTransferPrometheusPort"`
 	} `yaml:"prometheus"`
+	Encryption struct {
+		Enable bool `yaml:"enable"`
+	} `yaml:"encryption"`
 }
 type PConversation struct {
 	ReliabilityLevel int  `yaml:"reliabilityLevel"`

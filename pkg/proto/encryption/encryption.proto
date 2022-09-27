@@ -1,0 +1,70 @@
+syntax = "proto3";
+option go_package = "Open_IM/pkg/proto/encryption;encryption";
+package encryption;
+
+message CommonResp{
+  int32  errCode = 1;
+  string errMsg = 2;
+}
+
+
+
+message MsgContent {
+  string  sendID = 1;
+  string  recvID = 2;
+  string groupID = 3;
+  int32  sessionType = 4;
+  int32 msgFrom = 5;
+  int32 contentType = 6;
+  bytes content = 7;
+  int32 keyVersion = 8;
+}
+
+message EncryptContentReq {
+    MsgContent msgContent = 1;
+    repeated  string recvIDList = 2;
+  string operationID = 3;
+}
+
+message EncryptContentResp{
+  CommonResp  CommonResp = 1;
+  repeated MsgContent msgContentList = 2;
+}
+
+
+message GetEncryptionKeyReq{
+  string operationID = 1;
+  string opUserID = 2;
+  string userID = 3;
+  string groupID = 4;
+  int32 keyVersion = 5;
+}
+
+message VersionKey {
+  int32 version = 1;
+  string key = 2;
+}
+message GetEncryptionKeyResp{
+  CommonResp  CommonResp = 1;
+  repeated VersionKey versionKeyList = 2;
+}
+
+
+message GenEncryptionKeyReq{
+  string operationID = 1;
+  string opUserID = 2;
+  string userID = 3;
+  string groupID = 4;
+}
+
+message GenEncryptionKeyResp{
+  CommonResp  CommonResp = 1;
+}
+
+
+service encryption {
+  rpc EncryptContent(EncryptContentReq)returns(EncryptContentResp);
+  rpc GetEncryptionKey(GetEncryptionKeyReq) returns (GetEncryptionKeyResp);
+  rpc GenUserEncryptionKey(GenEncryptionKeyReq) returns (GenEncryptionKeyResp);
+}
+
