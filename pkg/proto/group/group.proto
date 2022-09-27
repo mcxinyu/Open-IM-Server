@@ -29,7 +29,6 @@ message CreateGroupResp{
   server_api_params.GroupInfo GroupInfo = 3;
 }
 
-
 message GetGroupsInfoReq{
   repeated string GroupIDList = 1;
   string OperationID = 2;

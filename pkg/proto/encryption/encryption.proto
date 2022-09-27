@@ -7,8 +7,6 @@ message CommonResp{
   string errMsg = 2;
 }
 
-
-
 message MsgContent {
   string  sendID = 1;
   string  recvID = 2;
