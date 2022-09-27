@@ -11,6 +11,7 @@ import (
 	"Open_IM/pkg/grpc-etcdv3/getcdv3"
 	cacheRpc "Open_IM/pkg/proto/cache"
 	pbConversation "Open_IM/pkg/proto/conversation"
+	"Open_IM/pkg/proto/encryption"
 	pbChat "Open_IM/pkg/proto/msg"
 	pbRelay "Open_IM/pkg/proto/relay"
 	sdk_ws "Open_IM/pkg/proto/sdk_ws"
@@ -285,21 +286,22 @@ func (rpc *rpcChat) SendMsg(_ context.Context, pb *pbChat.SendMsgReq) (*pbChat.S
 		t1 = time.Now()
 		isSend := modifyMessageByUserMessageReceiveOpt(pb.MsgData.RecvID, pb.MsgData.SendID, constant.SingleChatType, pb)
 		log.Info(pb.OperationID, "modifyMessageByUserMessageReceiveOpt ", " cost time: ", time.Since(t1))
+		var originalContent []byte
+		var originalVersion int32
 		if isSend {
-
-			if config.Config.Encryption.Enable {
-				tmp := valueCopy(pb)
-				msgToMQSingle.MsgData = tmp.MsgData
+			if config.Config.Encryption.Enable && pb.MsgData.ContentType == constant.Text {
 				err, encryptList := EncryptionContent(msgToMQSingle.MsgData, []string{msgToMQSingle.MsgData.RecvID}, msgToMQSingle.OperationID)
 				if err != nil {
 					log.NewError(msgToMQSingle.OperationID, " EncryptionContent failed  ", err.Error(), msgToMQSingle.MsgData.String(), msgToMQSingle.MsgData.RecvID)
 					return returnMsg(&replay, pb, 601, "EncryptionContent failed "+err.Error(), "", 0)
 				} else {
+					originalContent = copyContent(msgToMQSingle.MsgData.Content)
+					originalVersion = msgToMQSingle.MsgData.KeyVersion
 					msgToMQSingle.MsgData.Content = encryptList[0].Content
-					msgToMQSingle.MsgData.KeyVersion = encryptList[0].Version
+					msgToMQSingle.MsgData.KeyVersion = encryptList[0].KeyVersion
 				}
 			} else {
-				msgToMQSingle.MsgData = pb.MsgData
+				//	msgToMQSingle.MsgData = pb.MsgData
 			}
 
 			log.NewInfo(msgToMQSingle.OperationID, msgToMQSingle)
@@ -310,6 +312,12 @@ func (rpc *rpcChat) SendMsg(_ context.Context, pb *pbChat.SendMsgReq) (*pbChat.S
 				log.NewError(msgToMQSingle.OperationID, "kafka send msg err :RecvID", msgToMQSingle.MsgData.RecvID, msgToMQSingle.String(), err1.Error())
 				return returnMsg(&replay, pb, 201, "kafka send msg err", "", 0)
 			}
+
+			if len(originalContent) != 0 {
+				msgToMQSingle.MsgData.Content = originalContent
+				msgToMQSingle.MsgData.KeyVersion = originalVersion
+			}
+
 		}
 		if msgToMQSingle.MsgData.SendID != msgToMQSingle.MsgData.RecvID { //Filter messages sent to yourself
 			t1 = time.Now()
@@ -963,7 +971,9 @@ func valueCopy(pb *pbChat.SendMsgReq) *pbChat.SendMsgReq {
 		offlinePushInfo = *pb.MsgData.OfflinePushInfo
 	}
 	msgData := sdk_ws.MsgData{}
+
 	msgData = *pb.MsgData
+	msgData.Content = copyContent(msgData.Content)
 	msgData.OfflinePushInfo = &offlinePushInfo
 
 	options := make(map[string]bool, 10)
@@ -972,6 +982,12 @@ func valueCopy(pb *pbChat.SendMsgReq) *pbChat.SendMsgReq {
 	}
 	msgData.Options = options
 	return &pbChat.SendMsgReq{Token: pb.Token, OperationID: pb.OperationID, MsgData: &msgData}
+}
+
+func copyContent(content []byte) []byte {
+	slice2 := make([]byte, len(content))
+	copy(slice2, content)
+	return slice2
 }
 
 func (rpc *rpcChat) sendMsgToGroup(list []string, pb pbChat.SendMsgReq, status string, sendTag *bool, wg *sync.WaitGroup) {
@@ -1017,10 +1033,10 @@ func (rpc *rpcChat) sendMsgToGroupOptimization(list []string, groupPB *pbChat.Se
 		tempOptions[k] = v
 	}
 
-	var encryptList []EncryptVersion
+	var encryptList []*encryption.MsgContent
 	var err error
-	if config.Config.Encryption.Enable {
-		err, encryptList = EncryptionContent(groupPB.MsgData, list)
+	if config.Config.Encryption.Enable && groupPB.MsgData.ContentType == constant.Text {
+		err, encryptList = EncryptionContent(groupPB.MsgData, list, msgToMQGroup.OperationID)
 		if err != nil {
 			log.Error(msgToMQGroup.OperationID, "EncryptionContent failed ", err.Error(), groupPB.MsgData.String(), list)
 			wg.Done()
@@ -1028,7 +1044,7 @@ func (rpc *rpcChat) sendMsgToGroupOptimization(list []string, groupPB *pbChat.Se
 		}
 	}
 
-	for _, v := range list {
+	for k, v := range list {
 		groupPB.MsgData.RecvID = v
 		options := make(map[string]bool, 1)
 		for k, v := range tempOptions {
@@ -1040,6 +1056,10 @@ func (rpc *rpcChat) sendMsgToGroupOptimization(list []string, groupPB *pbChat.Se
 			if v == "" || groupPB.MsgData.SendID == "" {
 				log.Error(msgToMQGroup.OperationID, "sendMsgToGroupOptimization userID nil ", msgToMQGroup.String())
 				continue
+			}
+			if config.Config.Encryption.Enable && groupPB.MsgData.ContentType == constant.Text {
+				msgToMQGroup.MsgData.KeyVersion = encryptList[k].KeyVersion
+				msgToMQGroup.MsgData.Content = encryptList[k].Content
 			}
 			err := rpc.sendMsgToKafka(&msgToMQGroup, v, status)
 			if err != nil {
