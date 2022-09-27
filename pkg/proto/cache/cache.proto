@@ -1,6 +1,5 @@
 syntax = "proto3";
 option go_package = "Open_IM/pkg/proto/cache;cache";
-import "Open-IM-Server/pkg/proto/sdk_ws/ws.proto";
 package cache;
 
 message CommonResp{
