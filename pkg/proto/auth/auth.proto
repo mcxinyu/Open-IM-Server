@@ -13,6 +13,7 @@ message CommonResp{
 message UserRegisterReq {
     server_api_params.UserInfo UserInfo = 1;
     string OperationID = 2;
+    string OpUserID = 3;
 }
 message UserRegisterResp {
     CommonResp CommonResp = 1;

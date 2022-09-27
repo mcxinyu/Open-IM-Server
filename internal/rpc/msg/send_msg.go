@@ -286,7 +286,22 @@ func (rpc *rpcChat) SendMsg(_ context.Context, pb *pbChat.SendMsgReq) (*pbChat.S
 		isSend := modifyMessageByUserMessageReceiveOpt(pb.MsgData.RecvID, pb.MsgData.SendID, constant.SingleChatType, pb)
 		log.Info(pb.OperationID, "modifyMessageByUserMessageReceiveOpt ", " cost time: ", time.Since(t1))
 		if isSend {
-			msgToMQSingle.MsgData = pb.MsgData
+
+			if config.Config.Encryption.Enable {
+				tmp := valueCopy(pb)
+				msgToMQSingle.MsgData = tmp.MsgData
+				err, encryptList := EncryptionContent(msgToMQSingle.MsgData, []string{msgToMQSingle.MsgData.RecvID}, msgToMQSingle.OperationID)
+				if err != nil {
+					log.NewError(msgToMQSingle.OperationID, " EncryptionContent failed  ", err.Error(), msgToMQSingle.MsgData.String(), msgToMQSingle.MsgData.RecvID)
+					return returnMsg(&replay, pb, 601, "EncryptionContent failed "+err.Error(), "", 0)
+				} else {
+					msgToMQSingle.MsgData.Content = encryptList[0].Content
+					msgToMQSingle.MsgData.KeyVersion = encryptList[0].Version
+				}
+			} else {
+				msgToMQSingle.MsgData = pb.MsgData
+			}
+
 			log.NewInfo(msgToMQSingle.OperationID, msgToMQSingle)
 			t1 = time.Now()
 			err1 := rpc.sendMsgToKafka(&msgToMQSingle, msgToMQSingle.MsgData.RecvID, constant.OnlineStatus)
@@ -1001,6 +1016,18 @@ func (rpc *rpcChat) sendMsgToGroupOptimization(list []string, groupPB *pbChat.Se
 	for k, v := range groupPB.MsgData.Options {
 		tempOptions[k] = v
 	}
+
+	var encryptList []EncryptVersion
+	var err error
+	if config.Config.Encryption.Enable {
+		err, encryptList = EncryptionContent(groupPB.MsgData, list)
+		if err != nil {
+			log.Error(msgToMQGroup.OperationID, "EncryptionContent failed ", err.Error(), groupPB.MsgData.String(), list)
+			wg.Done()
+			return
+		}
+	}
+
 	for _, v := range list {
 		groupPB.MsgData.RecvID = v
 		options := make(map[string]bool, 1)

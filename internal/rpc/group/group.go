@@ -13,6 +13,7 @@ import (
 	"Open_IM/pkg/grpc-etcdv3/getcdv3"
 	pbCache "Open_IM/pkg/proto/cache"
 	pbConversation "Open_IM/pkg/proto/conversation"
+	"Open_IM/pkg/proto/encryption"
 	pbGroup "Open_IM/pkg/proto/group"
 	open_im_sdk "Open_IM/pkg/proto/sdk_ws"
 	pbUser "Open_IM/pkg/proto/user"
@@ -222,11 +223,29 @@ func (s *groupServer) CreateGroup(ctx context.Context, req *pbGroup.CreateGroupR
 				}
 			}()
 		}
-		return resp, nil
 	} else {
-		log.NewInfo(req.OperationID, "rpc CreateGroup return ", resp.String())
-		return resp, nil
+		log.NewInfo(req.OperationID, "rpc CreateGroup return ", resp.String(), "len(okUserIDList) == 0 ")
 	}
+	if config.Config.Encryption.Enable && (req.GroupInfo.GroupType == constant.WorkingGroup || req.GroupInfo.GroupType == constant.SuperGroup) {
+		etcdConn := getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImEncryptionName, req.OperationID)
+		if etcdConn == nil {
+			errMsg := req.OperationID + "getcdv3.GetDefaultConn == nil"
+			log.NewError(req.OperationID, errMsg)
+			return resp, nil
+		}
+		client := encryption.NewEncryptionClient(etcdConn)
+		genUserEncryptionKeyReq := encryption.GenEncryptionKeyReq{GroupID: groupId, OperationID: req.OperationID, OpUserID: req.OpUserID}
+		RpcResp, err := client.GenUserEncryptionKey(context.Background(), &genUserEncryptionKeyReq)
+		if err != nil {
+			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", err.Error(), genUserEncryptionKeyReq.String())
+			return resp, nil
+		}
+		if RpcResp.CommonResp.ErrCode != 0 {
+			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", RpcResp.CommonResp)
+			return resp, nil
+		}
+	}
+	return resp, nil
 }
 
 func (s *groupServer) GetJoinedGroupList(ctx context.Context, req *pbGroup.GetJoinedGroupListReq) (*pbGroup.GetJoinedGroupListResp, error) {

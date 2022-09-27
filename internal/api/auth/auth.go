@@ -57,6 +57,9 @@ func UserRegister(c *gin.Context) {
 		return
 	}
 	client := rpc.NewAuthClient(etcdConn)
+	if len(config.Config.Manager.AppManagerUid) > 0 {
+		req.OpUserID = config.Config.Manager.AppManagerUid[0]
+	}
 	reply, err := client.UserRegister(context.Background(), req)
 	if err != nil {
 		errMsg := req.OperationID + " " + "UserRegister failed " + err.Error() + req.String()

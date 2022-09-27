@@ -8,6 +8,7 @@ import (
 	"Open_IM/pkg/common/token_verify"
 	"Open_IM/pkg/grpc-etcdv3/getcdv3"
 	pbAuth "Open_IM/pkg/proto/auth"
+	"Open_IM/pkg/proto/encryption"
 	pbRelay "Open_IM/pkg/proto/relay"
 	"Open_IM/pkg/utils"
 	"context"
@@ -35,6 +36,29 @@ func (rpc *rpcAuth) UserRegister(_ context.Context, req *pbAuth.UserRegisterReq)
 		log.NewError(req.OperationID, errMsg, user)
 		return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{ErrCode: constant.ErrDB.ErrCode, ErrMsg: errMsg}}, nil
 	}
+	if config.Config.Encryption.Enable {
+		etcdConn := getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImEncryptionName, req.OperationID)
+		if etcdConn == nil {
+			errMsg := req.OperationID + "getcdv3.GetDefaultConn == nil"
+			log.NewError(req.OperationID, errMsg)
+			log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " rpc return ", pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}})
+			return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}}, nil
+		}
+		client := encryption.NewEncryptionClient(etcdConn)
+		genUserEncryptionKeyReq := encryption.GenEncryptionKeyReq{UserID: req.UserInfo.UserID, OperationID: req.OperationID, OpUserID: req.OpUserID}
+		RpcResp, err := client.GenUserEncryptionKey(context.Background(), &genUserEncryptionKeyReq)
+		if err != nil {
+			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", err.Error(), genUserEncryptionKeyReq.String())
+			log.NewInfo(genUserEncryptionKeyReq.OperationID, utils.GetSelfFuncName(), " rpc return ", pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}})
+			return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}}, nil
+		}
+		if RpcResp.CommonResp.ErrCode != 0 {
+			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", RpcResp.CommonResp)
+			log.NewInfo(genUserEncryptionKeyReq.OperationID, utils.GetSelfFuncName(), " rpc return ", pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}})
+			return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}}, nil
+		}
+	}
+
 	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " rpc return ", pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}})
 	return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}}, nil
 }

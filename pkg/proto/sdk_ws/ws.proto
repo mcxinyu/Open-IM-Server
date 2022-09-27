@@ -264,8 +264,7 @@ message MsgData {
   bytes msgDataList = 21;
   string attachedInfo = 22;
   string  ex = 23;
-  int32 sendIDKeyVersion = 24;
-  int32 RecvIDKeyVersion = 25;
+  int32 keyVersion = 24;
 }
 
 message OfflinePushInfo{
