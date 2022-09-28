@@ -60,6 +60,11 @@ message GenEncryptionKeyResp{
   CommonResp  CommonResp = 1;
 }
 
+message GroupVersionKey  {
+  int32 version = 1;
+  string key     =2;
+  string groupID =3;
+}
 
 
 service encryption {

@@ -153,12 +153,6 @@ type GetAllJoinedGroupEncryptionKeyReq struct {
 	UserID      string `json:"userID"`
 }
 
-type GroupVersionKey struct {
-	Version int32  `json:"version"`
-	Key     string `json:"key"`
-	GroupID string `json:"groupID"`
-}
-
 type GetAllJoinedGroupEncryptionKeyResp struct {
 	CommResp
 	GroupVersionKeyList []*GroupVersionKey       `json:"-"`
