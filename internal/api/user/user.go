@@ -592,7 +592,6 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 		if etcdConn == nil {
 			errMsg := req.OperationID + "getcdv3.GetDefaultConn == nil"
 			log.NewError(req.OperationID, errMsg)
-			c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": errMsg})
 			continue
 		}
 		client := encryption.NewEncryptionClient(etcdConn)
@@ -612,8 +611,8 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 	}
 	resp := api.GetEncryptionKeyResp{CommResp: api.CommResp{}}
 	resp.Data = jsonData.JsonDataList(groupVersionKeyList)
-	c.JSON(http.StatusOK, resp)
 	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " api return ", resp)
+	c.JSON(http.StatusOK, resp)
 }
 
 //GetEncryptionKey
