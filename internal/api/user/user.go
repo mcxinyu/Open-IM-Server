@@ -587,6 +587,7 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 
 	var groupVersionKeyList []*api.GroupVersionKey
 	for _, v := range readGroupIDList {
+
 		req.GroupID = v
 		etcdConn := getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImEncryptionName, req.OperationID)
 		if etcdConn == nil {
@@ -595,6 +596,7 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 			continue
 		}
 		client := encryption.NewEncryptionClient(etcdConn)
+		log.NewInfo(req.OperationID, "readGroupIDList  ", v, req.String())
 		RpcResp, err := client.GetEncryptionKey(context.Background(), req)
 		if err != nil {
 			errMsg := req.OperationID + "GetEncryptionKey failed " + err.Error() + req.String()
