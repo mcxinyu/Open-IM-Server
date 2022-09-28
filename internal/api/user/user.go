@@ -9,6 +9,7 @@ import (
 	"Open_IM/pkg/common/token_verify"
 	"Open_IM/pkg/grpc-etcdv3/getcdv3"
 	cacheRpc "Open_IM/pkg/proto/cache"
+	"Open_IM/pkg/proto/group"
 	pbRelay "Open_IM/pkg/proto/relay"
 	open_im_sdk "Open_IM/pkg/proto/sdk_ws"
 	rpc "Open_IM/pkg/proto/user"
@@ -17,6 +18,7 @@ import (
 	"net/http"
 	"strings"
 
+	"Open_IM/pkg/proto/encryption"
 	"github.com/gin-gonic/gin"
 )
 
@@ -511,4 +513,149 @@ func GetUsers(c *gin.Context) {
 	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), resp)
 	c.JSON(http.StatusOK, resp)
 	return
+}
+
+func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
+	params := api.GetAllJoinedGroupEncryptionKeyReq{}
+	if err := c.BindJSON(&params); err != nil {
+		log.NewError("", "BindJSON failed ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"errCode": http.StatusBadRequest, "errMsg": err.Error()})
+		return
+	}
+	req := &encryption.GetEncryptionKeyReq{}
+	req.OperationID = params.OperationID
+
+	var ok bool
+	var errInfo string
+	ok, req.OpUserID, errInfo = token_verify.GetUserIDFromToken(c.Request.Header.Get("token"), req.OperationID)
+	if !ok {
+		errMsg := req.OperationID + " " + "GetUserIDFromToken failed " + errInfo + " token:" + c.Request.Header.Get("token")
+		log.NewError(req.OperationID, errMsg)
+		c.JSON(http.StatusBadRequest, gin.H{"errCode": 500, "errMsg": errMsg})
+		return
+	}
+
+	getJoinedGroupListReq := &group.GetJoinedGroupListReq{}
+	getJoinedGroupListReq.OpUserID = req.OpUserID
+	getJoinedGroupListReq.OperationID = params.OperationID
+	getJoinedGroupListReq.FromUserID = params.UserID
+
+	etcdConn := getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImGroupName, getJoinedGroupListReq.OperationID)
+	if etcdConn == nil {
+		errMsg := getJoinedGroupListReq.OperationID + "getcdv3.GetDefaultConn == nil"
+		log.NewError(getJoinedGroupListReq.OperationID, errMsg)
+		c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": errMsg})
+		return
+	}
+	client := group.NewGroupClient(etcdConn)
+	groupResp, err := client.GetJoinedGroupList(context.Background(), getJoinedGroupListReq)
+	if err != nil {
+		log.NewError(getJoinedGroupListReq.OperationID, "GetJoinedGroupList failed  ", err.Error(), getJoinedGroupListReq.String())
+		c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": err.Error()})
+		return
+	}
+
+	log.NewInfo(req.OperationID, "GetJoinedGroupList args ", getJoinedGroupListReq.String(), " resp ", groupResp.String())
+
+	var readGroupIDList []string
+	for _, v := range groupResp.GroupList {
+		if v.GroupType == constant.SuperGroup || v.GroupType == constant.WorkingGroup {
+			readGroupIDList = append(readGroupIDList, v.GroupID)
+		}
+	}
+
+	reqPb := group.GetJoinedSuperGroupListReq{OperationID: params.OperationID, OpUserID: req.OpUserID, UserID: params.UserID}
+	etcdConn = getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImGroupName, reqPb.OperationID)
+	if etcdConn == nil {
+		errMsg := reqPb.OperationID + "getcdv3.GetDefaultConn == nil"
+		log.NewError(reqPb.OperationID, errMsg)
+		c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": errMsg})
+		return
+	}
+	client = group.NewGroupClient(etcdConn)
+	rpcSuperResp, err := client.GetJoinedSuperGroupList(context.Background(), &reqPb)
+	if err != nil {
+		log.NewError(req.OperationID, "InviteUserToGroup failed ", err.Error(), reqPb.String())
+		c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": err.Error()})
+		return
+	}
+
+	log.NewInfo(req.OperationID, "GetJoinedSuperGroupList args ", reqPb.String(), " resp ", rpcSuperResp.String())
+	for _, v := range rpcSuperResp.GroupList {
+		readGroupIDList = append(readGroupIDList, v.GroupID)
+	}
+
+	var groupVersionKeyList []*api.GroupVersionKey
+	for _, v := range readGroupIDList {
+		req.GroupID = v
+		etcdConn := getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImEncryptionName, req.OperationID)
+		if etcdConn == nil {
+			errMsg := req.OperationID + "getcdv3.GetDefaultConn == nil"
+			log.NewError(req.OperationID, errMsg)
+			c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": errMsg})
+			continue
+		}
+		client := encryption.NewEncryptionClient(etcdConn)
+		RpcResp, err := client.GetEncryptionKey(context.Background(), req)
+		if err != nil {
+			errMsg := req.OperationID + "GetEncryptionKey failed " + err.Error() + req.String()
+			log.NewError(req.OperationID, errMsg)
+			continue
+		}
+		if RpcResp.CommonResp.ErrCode != 0 {
+			log.Error(req.OperationID, "GetEncryptionKey failed ", RpcResp.String())
+			continue
+		}
+		for _, r := range RpcResp.VersionKeyList {
+			groupVersionKeyList = append(groupVersionKeyList, &api.GroupVersionKey{Version: r.Version, Key: r.Key, GroupID: req.GroupID})
+		}
+	}
+	resp := api.GetEncryptionKeyResp{CommResp: api.CommResp{}}
+	resp.Data = jsonData.JsonDataList(groupVersionKeyList)
+	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " api return ", resp)
+}
+
+//GetEncryptionKey
+func GetEncryptionKey(c *gin.Context) {
+	params := api.GetEncryptionKeyReq{}
+	if err := c.BindJSON(&params); err != nil {
+		log.NewError("", "BindJSON failed ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"errCode": http.StatusBadRequest, "errMsg": err.Error()})
+		return
+	}
+	req := &encryption.GetEncryptionKeyReq{}
+	utils.CopyStructFields(req, &params)
+
+	var ok bool
+	var errInfo string
+	ok, req.OpUserID, errInfo = token_verify.GetUserIDFromToken(c.Request.Header.Get("token"), req.OperationID)
+	if !ok {
+		errMsg := req.OperationID + " " + "GetUserIDFromToken failed " + errInfo + " token:" + c.Request.Header.Get("token")
+		log.NewError(req.OperationID, errMsg)
+		c.JSON(http.StatusBadRequest, gin.H{"errCode": 500, "errMsg": errMsg})
+		return
+	}
+
+	log.NewInfo(params.OperationID, utils.GetSelfFuncName(), " args ", req.String())
+
+	etcdConn := getcdv3.GetDefaultConn(config.Config.Etcd.EtcdSchema, strings.Join(config.Config.Etcd.EtcdAddr, ","), config.Config.RpcRegisterName.OpenImEncryptionName, req.OperationID)
+	if etcdConn == nil {
+		errMsg := req.OperationID + "getcdv3.GetDefaultConn == nil"
+		log.NewError(req.OperationID, errMsg)
+		c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": errMsg})
+		return
+	}
+	client := encryption.NewEncryptionClient(etcdConn)
+	RpcResp, err := client.GetEncryptionKey(context.Background(), req)
+	if err != nil {
+		errMsg := req.OperationID + "GetEncryptionKey failed " + err.Error() + req.String()
+		log.NewError(req.OperationID, "GetEncryptionKey failed ", err.Error(), req.String())
+		c.JSON(http.StatusInternalServerError, gin.H{"errCode": 500, "errMsg": errMsg})
+		return
+	}
+
+	resp := api.GetEncryptionKeyResp{CommResp: api.CommResp{ErrCode: RpcResp.CommonResp.ErrCode, ErrMsg: RpcResp.CommonResp.ErrMsg}}
+	resp.Data = jsonData.JsonDataList(RpcResp.VersionKeyList)
+	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " api return ", resp)
+	c.JSON(http.StatusOK, resp)
 }

@@ -53,10 +53,11 @@ func (rpc *rpcAuth) UserRegister(_ context.Context, req *pbAuth.UserRegisterReq)
 			return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}}, nil
 		}
 		if RpcResp.CommonResp.ErrCode != 0 {
-			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", RpcResp.CommonResp)
+			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", RpcResp.CommonResp, genUserEncryptionKeyReq.String())
 			log.NewInfo(genUserEncryptionKeyReq.OperationID, utils.GetSelfFuncName(), " rpc return ", pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}})
 			return &pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}}, nil
 		}
+		log.NewInfo(req.OperationID, "GenUserEncryptionKey ok ", genUserEncryptionKeyReq.String(), RpcResp.String())
 	}
 
 	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " rpc return ", pbAuth.UserRegisterResp{CommonResp: &pbAuth.CommonResp{}})

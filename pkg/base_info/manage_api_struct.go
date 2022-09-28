@@ -130,3 +130,37 @@ type GetUsersResp struct {
 		ShowNumber  int32      `json:"showNumber"`
 	} `json:"data"`
 }
+
+type GetEncryptionKeyReq struct {
+	OperationID string `json:"operationID" binding:"required"`
+	UserID      string `json:"userID"`
+	GroupID     string `json:"groupID"`
+	KeyVersion  int32  `json:"keyVersion"`
+}
+type VersionKey struct {
+	Version int32  `json:"version"`
+	Key     string `json:"key"`
+}
+
+type GetEncryptionKeyResp struct {
+	CommResp
+	VersionKeyList []*VersionKey            `json:"-"`
+	Data           []map[string]interface{} `json:"data" swaggerignore:"true"`
+}
+
+type GetAllJoinedGroupEncryptionKeyReq struct {
+	OperationID string `json:"operationID" binding:"required"`
+	UserID      string `json:"userID"`
+}
+
+type GroupVersionKey struct {
+	Version int32  `json:"version"`
+	Key     string `json:"key"`
+	GroupID string `json:"groupID"`
+}
+
+type GetAllJoinedGroupEncryptionKeyResp struct {
+	CommResp
+	GroupVersionKeyList []*GroupVersionKey       `json:"-"`
+	Data                []map[string]interface{} `json:"data" swaggerignore:"true"`
+}

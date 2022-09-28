@@ -183,6 +183,7 @@ rpcregistername: #rpc注册服务名，默认即可
   openImConversationName: Conversation
   openImCacheName: Cache
   openImRealTimeCommName: RealTimeComm
+  openImEncryptionName: Encryption
 log:
   storageLocation: ../logs/
   rotationTime: 24
@@ -769,3 +770,6 @@ prometheus:
   cachePrometheusPort: [ 20240 ]
   realTimeCommPrometheusPort: [ 21300 ]
   messageTransferPrometheusPort: [ 21400, 21401, 21402, 21403 ] # 端口数量和 script/path_info.cfg  msg_transfer_service_num保持一致
+
+encryption:
+  enable: true

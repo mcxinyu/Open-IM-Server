@@ -317,8 +317,8 @@ func (rpc *rpcChat) SendMsg(_ context.Context, pb *pbChat.SendMsgReq) (*pbChat.S
 				msgToMQSingle.MsgData.Content = originalContent
 				msgToMQSingle.MsgData.KeyVersion = originalVersion
 			}
-
 		}
+
 		if msgToMQSingle.MsgData.SendID != msgToMQSingle.MsgData.RecvID { //Filter messages sent to yourself
 			t1 = time.Now()
 			err2 := rpc.sendMsgToKafka(&msgToMQSingle, msgToMQSingle.MsgData.SendID, constant.OnlineStatus)
@@ -1057,10 +1057,14 @@ func (rpc *rpcChat) sendMsgToGroupOptimization(list []string, groupPB *pbChat.Se
 				log.Error(msgToMQGroup.OperationID, "sendMsgToGroupOptimization userID nil ", msgToMQGroup.String())
 				continue
 			}
+			if v != encryptList[k].RecvID {
+				log.Error(msgToMQGroup.OperationID, "v != encryptList[k].RecvID ", v, encryptList[k].RecvID)
+			}
 			if config.Config.Encryption.Enable && groupPB.MsgData.ContentType == constant.Text {
 				msgToMQGroup.MsgData.KeyVersion = encryptList[k].KeyVersion
 				msgToMQGroup.MsgData.Content = encryptList[k].Content
 			}
+
 			err := rpc.sendMsgToKafka(&msgToMQGroup, v, status)
 			if err != nil {
 				log.NewError(msgToMQGroup.OperationID, "kafka send msg err:UserId", v, msgToMQGroup.String())

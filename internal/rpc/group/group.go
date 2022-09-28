@@ -244,6 +244,7 @@ func (s *groupServer) CreateGroup(ctx context.Context, req *pbGroup.CreateGroupR
 			log.NewError(genUserEncryptionKeyReq.OperationID, "GenUserEncryptionKey failed ", RpcResp.CommonResp)
 			return resp, nil
 		}
+		log.Info(req.OperationID, "GenUserEncryptionKey ok ", genUserEncryptionKeyReq.String(), RpcResp.String())
 	}
 	return resp, nil
 }

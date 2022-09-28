@@ -33,9 +33,9 @@ func EncryptionContent(msgData *sdk_ws.MsgData, recvIDList []string, operationID
 		log.Error(operationID, "EncryptContent failed ", RpcResp.CommonResp, encryptContentReq.String())
 		return errors.New(RpcResp.CommonResp.ErrMsg), nil
 	}
-	if len(RpcResp.MsgContentList) == 0 {
-		log.Error(operationID, "len(RpcResp.MsgContentList) == 0 ")
-		return errors.New("len(RpcResp.MsgContentList) == 0"), nil
+	if len(RpcResp.MsgContentList) != len(recvIDList) {
+		log.Error(operationID, "len(RpcResp.MsgContentList) != len(recvIDList) ", len(RpcResp.MsgContentList), len(recvIDList))
+		return errors.New("len(RpcResp.MsgContentList) != len(recvIDList)"), nil
 	}
 	return nil, RpcResp.MsgContentList
 }
