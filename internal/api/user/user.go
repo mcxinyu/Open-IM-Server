@@ -610,7 +610,9 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 		for _, r := range RpcResp.VersionKeyList {
 			groupVersionKeyList = append(groupVersionKeyList, &api.GroupVersionKey{Version: r.Version, Key: r.Key, GroupID: req.GroupID})
 		}
+		log.NewInfo(req.OperationID, "groupVersionKeyList ", groupVersionKeyList)
 	}
+
 	resp := api.GetEncryptionKeyResp{CommResp: api.CommResp{}}
 	resp.Data = jsonData.JsonDataList(groupVersionKeyList)
 	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " api return ", resp)
