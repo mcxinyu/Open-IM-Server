@@ -585,7 +585,7 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 		readGroupIDList = append(readGroupIDList, v.GroupID)
 	}
 
-	var groupVersionKeyList []*api.GroupVersionKey
+	var groupVersionKeyList []*encryption.GroupVersionKey
 	for _, v := range readGroupIDList {
 
 		req.GroupID = v
@@ -608,12 +608,12 @@ func GetAllJoinedGroupEncryptionKey(c *gin.Context) {
 			continue
 		}
 		for _, r := range RpcResp.VersionKeyList {
-			groupVersionKeyList = append(groupVersionKeyList, &api.GroupVersionKey{Version: r.Version, Key: r.Key, GroupID: req.GroupID})
+			groupVersionKeyList = append(groupVersionKeyList, &encryption.GroupVersionKey{Version: r.Version, Key: r.Key, GroupID: req.GroupID})
 		}
 		log.NewInfo(req.OperationID, "groupVersionKeyList ", groupVersionKeyList)
 	}
 
-	resp := api.GetEncryptionKeyResp{CommResp: api.CommResp{}}
+	resp := api.GetAllJoinedGroupEncryptionKeyResp{CommResp: api.CommResp{}}
 	resp.Data = jsonData.JsonDataList(groupVersionKeyList)
 	log.NewInfo(req.OperationID, utils.GetSelfFuncName(), " api return ", resp)
 	c.JSON(http.StatusOK, resp)
