@@ -18,9 +18,10 @@ message MsgContent {
   int32 keyVersion = 8;
 }
 
+
 message EncryptContentReq {
-    MsgContent msgContent = 1;
-    repeated  string recvIDList = 2;
+  MsgContent msgContent = 1;
+  repeated  string recvIDList = 2;
   string operationID = 3;
 }
 
@@ -58,6 +59,7 @@ message GenEncryptionKeyReq{
 message GenEncryptionKeyResp{
   CommonResp  CommonResp = 1;
 }
+
 
 
 service encryption {
