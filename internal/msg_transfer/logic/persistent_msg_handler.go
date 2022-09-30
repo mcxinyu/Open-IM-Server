@@ -82,7 +82,7 @@ func (pc *PersistentConsumerHandler) handleChatWs2Mysql(cMsg *sarama.ConsumerMes
 			tag = true
 		}
 		if tag {
-			log.NewInfo(msgFromMQ.OperationID, "msg_transfer msg persisting", msgFromMQ.String())
+			log.NewInfo(msgFromMQ.OperationID, "msg_transfer msg persisting ", msgFromMQ.String())
 			if err = im_mysql_msg_model.InsertMessageToChatLog(&msgFromMQ); err != nil {
 				log.NewError(msgFromMQ.OperationID, "Message insert failed", "err", err.Error(), "msg", msgFromMQ.String())
 				//				msgInsertFailedMysqlCounter.Inc()
