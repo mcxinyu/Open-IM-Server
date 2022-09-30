@@ -37,7 +37,6 @@ func InsertMessageToChatLog(msg *pbMsg.MsgDataToMQ) error {
 			EmitDefaults: false,
 		}
 		chatLog.Content, _ = marshaler.MarshalToString(&tips)
-
 	} else {
 		if config.Config.Encryption.Enable && msg.MsgData.ContentType == constant.Text && msg.MsgData.KeyVersion != 0 {
 			chatLog.EncryptContent = msg.MsgData.Content
@@ -48,6 +47,6 @@ func InsertMessageToChatLog(msg *pbMsg.MsgDataToMQ) error {
 	}
 	chatLog.CreateTime = utils.UnixMillSecondToTime(msg.MsgData.CreateTime)
 	chatLog.SendTime = utils.UnixMillSecondToTime(msg.MsgData.SendTime)
-	log.NewDebug(msg.OperationID, "this is mysql chat log: ", chatLog.KeyVersion, chatLog.Content, chatLog.EncryptContent)
+	log.NewDebug(msg.OperationID, "this is mysql chat log: ", chatLog.KeyVersion, chatLog.Content)
 	return db.DB.MysqlDB.DefaultGormDB().Table("chat_logs").Create(chatLog).Error
 }
