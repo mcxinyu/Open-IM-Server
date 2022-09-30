@@ -48,6 +48,6 @@ func InsertMessageToChatLog(msg *pbMsg.MsgDataToMQ) error {
 	}
 	chatLog.CreateTime = utils.UnixMillSecondToTime(msg.MsgData.CreateTime)
 	chatLog.SendTime = utils.UnixMillSecondToTime(msg.MsgData.SendTime)
-	log.NewDebug(msg.OperationID, "this is mysql chat log: ", chatLog)
+	log.NewDebug(msg.OperationID, "this is mysql chat log: ", *chatLog)
 	return db.DB.MysqlDB.DefaultGormDB().Table("chat_logs").Create(chatLog).Error
 }
