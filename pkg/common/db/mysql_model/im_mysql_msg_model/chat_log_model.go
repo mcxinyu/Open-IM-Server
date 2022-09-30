@@ -41,6 +41,7 @@ func InsertMessageToChatLog(msg *pbMsg.MsgDataToMQ) error {
 		if config.Config.Encryption.Enable && msg.MsgData.ContentType == constant.Text && msg.MsgData.KeyVersion != 0 {
 			chatLog.EncryptContent = msg.MsgData.Content
 			chatLog.KeyVersion = msg.MsgData.KeyVersion
+			chatLog.Content = ""
 		} else {
 			chatLog.Content = string(msg.MsgData.Content)
 		}
