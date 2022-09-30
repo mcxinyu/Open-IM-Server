@@ -304,7 +304,7 @@ func (rpc *rpcChat) SendMsg(_ context.Context, pb *pbChat.SendMsgReq) (*pbChat.S
 				//	msgToMQSingle.MsgData = pb.MsgData
 			}
 
-			log.NewInfo(msgToMQSingle.OperationID, msgToMQSingle)
+			log.NewInfo(msgToMQSingle.OperationID, "to kafka ", msgToMQSingle.String(), msgToMQSingle.MsgData.RecvID)
 			t1 = time.Now()
 			err1 := rpc.sendMsgToKafka(&msgToMQSingle, msgToMQSingle.MsgData.RecvID, constant.OnlineStatus)
 			log.Info(pb.OperationID, "sendMsgToKafka ", " cost time: ", time.Since(t1))
@@ -320,6 +320,7 @@ func (rpc *rpcChat) SendMsg(_ context.Context, pb *pbChat.SendMsgReq) (*pbChat.S
 		}
 
 		if msgToMQSingle.MsgData.SendID != msgToMQSingle.MsgData.RecvID { //Filter messages sent to yourself
+			log.NewInfo(msgToMQSingle.OperationID, "to kafka ", msgToMQSingle.String(), msgToMQSingle.MsgData.SendID)
 			t1 = time.Now()
 			err2 := rpc.sendMsgToKafka(&msgToMQSingle, msgToMQSingle.MsgData.SendID, constant.OnlineStatus)
 			log.Info(pb.OperationID, "sendMsgToKafka ", " cost time: ", time.Since(t1))
