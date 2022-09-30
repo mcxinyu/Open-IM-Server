@@ -241,6 +241,9 @@ type ChatLog struct {
 	SendTime         time.Time `gorm:"column:send_time;index:sendTime;index:content_type,priority:1;index:session_type,priority:1;index:recv_id,priority:1;index:send_id,priority:1" json:"sendTime"`
 	CreateTime       time.Time `gorm:"column:create_time" json:"createTime"`
 	Ex               string    `gorm:"column:ex;type:varchar(1024)" json:"ex"`
+
+	EncryptContent []byte `gorm:"column:encrypt_content;type:varbinary(3000)" json:"encryptContent"`
+	KeyVersion     int32  `gorm:"column:key_version" json:"keyVersion"`
 }
 
 func (ChatLog) TableName() string {

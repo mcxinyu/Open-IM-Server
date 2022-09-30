@@ -7,6 +7,7 @@
 package im_mysql_msg_model
 
 import (
+	"Open_IM/pkg/common/config"
 	"Open_IM/pkg/common/constant"
 	"Open_IM/pkg/common/db"
 	"Open_IM/pkg/common/log"
@@ -18,7 +19,7 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-func InsertMessageToChatLog(msg pbMsg.MsgDataToMQ) error {
+func InsertMessageToChatLog(msg *pbMsg.MsgDataToMQ) error {
 	chatLog := new(db.ChatLog)
 	copier.Copy(chatLog, msg.MsgData)
 	switch msg.MsgData.SessionType {
@@ -38,10 +39,15 @@ func InsertMessageToChatLog(msg pbMsg.MsgDataToMQ) error {
 		chatLog.Content, _ = marshaler.MarshalToString(&tips)
 
 	} else {
-		chatLog.Content = string(msg.MsgData.Content)
+		if config.Config.Encryption.Enable && msg.MsgData.ContentType == constant.Text && msg.MsgData.KeyVersion != 0 {
+			chatLog.EncryptContent = msg.MsgData.Content
+			chatLog.KeyVersion = msg.MsgData.KeyVersion
+		} else {
+			chatLog.Content = string(msg.MsgData.Content)
+		}
 	}
 	chatLog.CreateTime = utils.UnixMillSecondToTime(msg.MsgData.CreateTime)
 	chatLog.SendTime = utils.UnixMillSecondToTime(msg.MsgData.SendTime)
-	log.NewDebug("test", "this is ", chatLog)
+	log.NewDebug(msg.OperationID, "this is mysql chat log: ", chatLog)
 	return db.DB.MysqlDB.DefaultGormDB().Table("chat_logs").Create(chatLog).Error
 }
