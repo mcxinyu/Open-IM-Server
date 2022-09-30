@@ -22,7 +22,7 @@ func EncryptionContent(msgData *sdk_ws.MsgData, recvIDList []string, operationID
 	client := encryption.NewEncryptionClient(etcdConn)
 	encryptContentReq := encryption.EncryptContentReq{OperationID: operationID, RecvIDList: recvIDList,
 		MsgContent: &encryption.MsgContent{SendID: msgData.SendID, RecvID: msgData.RecvID, GroupID: msgData.GroupID,
-			SessionType: msgData.SessionType, MsgFrom: msgData.MsgFrom, ContentType: msgData.ContentType, Content: msgData.Content}}
+			SessionType: msgData.SessionType, MsgFrom: msgData.MsgFrom, ContentType: msgData.ContentType, Content: msgData.Content, KeyVersion: msgData.KeyVersion}}
 	RpcResp, err := client.EncryptContent(context.Background(), &encryptContentReq)
 
 	if err != nil {
