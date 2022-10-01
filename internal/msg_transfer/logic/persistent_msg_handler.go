@@ -94,7 +94,6 @@ func (pc *PersistentConsumerHandler) handleChatWs2Mysql(cMsg *sarama.ConsumerMes
 				//				msgInsertMysqlCounter.Inc()
 			}
 		}
-
 	}
 }
 func (PersistentConsumerHandler) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
